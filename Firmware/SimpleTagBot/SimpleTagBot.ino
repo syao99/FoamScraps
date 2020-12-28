@@ -1,30 +1,35 @@
-// 
-// Quick, simple flywheel blaster.
-// Controls: Rev speed, Rev switch, Firing switch.
-// Outputs: Flywheel spin, Solenoid firing.
-// Pinouts set up for Arduino Pro Mini.
-// Todo: Add second stage pins with staggered spinup to reduce initial power draw.
+/*
+	Tagbot prototype firmware.
+	Quick, simple flywheel blaster. Features: Rev speed control, rev switch and firing switch logic, semi/full firing modes, brushless motors.
+	Pinouts set up for Arduino Pro Mini.
+	WARNING: This code is not yet fully tested, use at own risk!
+	Todo: Add second stage pins with staggered spinup to reduce initial power draw. Add brushed motor modes maybe.
+
+	Copyright (C) 2020 Input Eater Creations.
+	Licensed under The MIT License.
+*/
 
 # include <Servo.h>
 
 // Inputs
-const int revSpeedPin = A0;
-const int revSwitchPin = 12;
-const int trigSwitchPin = 11;
-const int selectorSwitchPin = 10;
+const int revSpeedPin = A3;
+const int revSwitchPin = A2;
+const int trigSwitchPin = A1;
+const int selectorSwitchPin = A0;
 
 // Outputs
-const int motorPin = 8;
-const int solenoidPin = 9;
+const int escPin = 12;
+const int solenoidPin = 11;
+// const int pwmStageOnePin = 10; // Reserved for brushed motors
 
-// Params
+// User Params
 const int minWheelSpeed = 1000;
 const int maxWheelSpeed = 2000;
 const int dps = 10;
-const float dwellPercentage = 0.5f;
+const float dwellPercentage = 0.5;
 // const int deadzone = 10;
 
-// End of User Params ________________________________________________________________
+// END OF USER PARAMS ________________________________________________________________
 
 // Auto-Calculated Params - all units milliseconds
 const float fireCycleTime = 1000 / dps;
@@ -34,6 +39,7 @@ const float offTime = fireCycleTime - dwellTime;
 // State
 int currentSpeed = 0;
 unsigned long firingStartTime = 0;
+unsigned long currentFiringTime = 0;
 bool previousIsFiring = false;
 Servo esc;
 
@@ -45,10 +51,10 @@ void setup() {
 	pinMode(trigSwitchPin, INPUT_PULLUP);
 	pinMode(selectorSwitchPin, INPUT_PULLUP);
 
-	pinMode(motorPin, OUTPUT);
+	pinMode(escPin, OUTPUT);
 	pinMode(solenoidPin, OUTPUT);
 
-	esc.attach(motorPin);
+	esc.attach(escPin);
 	//Serial.begin(9600);
 	//Serial.println("start");
 }
@@ -61,6 +67,7 @@ void loop() {
 
 // Non-pure Functions
 void resetFiringTimer() {
+	currentFiringTime = 0;
 	firingStartTime = millis();
 }
 
@@ -96,8 +103,9 @@ bool getFiringLogic() { // Return bool controlling firing.
 	if (isFiring() && !previousIsFiring) { // If the firing switch just got pressed.
 		resetFiringTimer();
 		return true;
-	} else if (isFiring() && previousIsFiring) { // If the fs has been held down.
-		unsigned long currentFiringTime = getCurrentFiringTimerTime();
+	}
+	else if (isFiring() && previousIsFiring) { // If the fs has been held down.
+		currentFiringTime = getCurrentFiringTimerTime();
 		if (currentFiringTime < dwellTime) {
 			return true;
 		}
@@ -113,7 +121,7 @@ bool getFiringLogic() { // Return bool controlling firing.
 		}
 	}
 	else if (!isFiring()) { // If the fs isn't being pressed.
-		unsigned long currentFiringTime = getCurrentFiringTimerTime();
+		currentFiringTime = getCurrentFiringTimerTime();
 		if (currentFiringTime < dwellTime) { // Keep solenoid forward until dwelltime has passed.
 			return true;
 		}
