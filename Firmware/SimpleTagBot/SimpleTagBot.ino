@@ -65,13 +65,15 @@ void loop() {
 	previousIsFiring = isFiring();
 }
 
-// Non-pure Functions
+// Impure Functions
+
 void resetFiringTimer() {
 	currentFiringTime = 0;
 	firingStartTime = millis();
 }
 
 // Pure Functions
+
 int getOutputSpeed(int inputValue) {
 	/* Deadzone mode for analog revswitches, not used.
 	if (inputValue < deadzone) {
@@ -99,6 +101,7 @@ unsigned long getCurrentFiringTimerTime() {
 }
 
 // Complex Pure Functions
+
 bool getFiringLogic() { // Return bool controlling firing.
 	if (isFiring() && !previousIsFiring) { // If the firing switch just got pressed.
 		resetFiringTimer();
